@@ -1,0 +1,225 @@
+#import and null treatment of Training data
+import pandas as pd
+import missingno as msno
+import matplotlib.pyplot as plt
+train_data = pd.read_csv('train.csv', sep=';')
+train_data['Lithonames']=train_data['FORCE_2020_LITHOFACIES_LITHOLOGY'].map(
+    {30000:'Sandstone', 65000:'Shale', 65030:'Sandstone/Shale', 70000:'Limestone', 80000:'Marl',
+    74000: 'Dolomite', 70032: 'Chalk', 88000: 'Halite', 86000: 'Anhydrite', 99000: 'Tuff',90000: 'Coal',93000: 'Basement'}
+)
+
+msno.bar(train_data)
+plt.figure(figsize=(15,8))
+(train_data['Lithonames'].value_counts()/train_data['Lithonames'].value_counts().sum()).plot.barh()
+plt.xlabel('Proportion Present')
+plt.ylabel('Lithology')
+plt.show()
+
+train_data.drop(['RSHA', 'SGR', 'DCAL', 'MUDWEIGHT', 'RMIC', 'RXO'], axis = 1, inplace=True)
+train_data['GROUP_encoded'] = train_data['GROUP'].astype('category')
+train_data['GROUP_encoded'] = train_data['GROUP_encoded'].cat.codes 
+
+train_data['FORMATION_encoded'] = train_data['FORMATION'].astype('category')
+train_data['FORMATION_encoded'] = train_data['FORMATION_encoded'].cat.codes
+
+train_data['WELL_encoded'] = train_data['WELL'].astype('category')
+train_data['WELL_encoded'] = train_data['WELL_encoded'].cat.codes
+
+# print(f'shape of dataframe after label encoding columns {train_data.shape}')
+
+train_data.drop(['GROUP','FORMATION','WELL'], axis = 1, inplace=True)
+train_data.fillna(-999, inplace = True)
+msno.bar(train_data)
+
+#Sampling data after null treatments
+train_data=train_data[
+    (train_data['FORCE_2020_LITHOFACIES_LITHOLOGY']==65000) |
+    (train_data['FORCE_2020_LITHOFACIES_LITHOLOGY']==30000) |
+    (train_data['FORCE_2020_LITHOFACIES_LITHOLOGY']==70000) |
+    (train_data['FORCE_2020_LITHOFACIES_LITHOLOGY']==65030) |
+    (train_data['FORCE_2020_LITHOFACIES_LITHOLOGY']==80000)
+]
+train_data =train_data.sample(600000)
+plt.figure(figsize=(15,8))
+(train_data['Lithonames'].value_counts()/train_data['Lithonames'].value_counts().sum()).plot.barh()
+plt.xlabel('Proportion Present')
+plt.ylabel('Lithology')
+plt.show()
+
+#Splitting train data into X and Y and  encoding labels
+l_key = {30000: 0,
+        65030: 1,
+        65000: 2,
+        80000: 3,
+        74000: 5,
+        70000: 4,
+        70032: 6,
+        88000: 7,
+        86000: 8,
+        99000: 9,
+        90000: 10,
+        93000: 11}
+X3 = training_data_t6.drop(['FORCE_2020_LITHOFACIES_LITHOLOGY','WELL_encoded','FORCE_2020_LITHOFACIES_CONFIDENCE'], axis = 1)
+Y3 = training_data_t6['FORCE_2020_LITHOFACIES_LITHOLOGY']
+Y3_mp = Y3.map(l_key)
+
+#Test Data Prep
+hidden2 = pd.read_csv('hidden_test.csv', sep=';')
+hidden2.drop(['RSHA', 'SGR', 'DCAL', 'MUDWEIGHT', 'RMIC', 'RXO'], axis = 1, inplace = True)
+#Encode group, formation, and wells
+hidden2['GROUP_encoded'] = hidden2['GROUP'].astype('category')
+hidden2['GROUP_encoded'] = hidden2['GROUP_encoded'].cat.codes 
+hidden2['FORMATION_encoded'] = hidden2['FORMATION'].astype('category')
+hidden2['FORMATION_encoded'] = hidden2['FORMATION_encoded'].cat.codes
+hidden2['WELL_encoded'] = hidden2['WELL'].astype('category')
+hidden2['WELL_encoded'] = hidden2['WELL_encoded'].cat.codes
+hidden2['Lithonames']=hidden2['FORCE_2020_LITHOFACIES_LITHOLOGY'].map(
+    {30000:'Sandstone', 65000:'Shale', 65030:'Sandstone/Shale', 70000:'Limestone', 80000:'Marl',
+    74000: 'Dolomite', 70032: 'Chalk', 88000: 'Halite', 86000: 'Anhydrite', 99000: 'Tuff',90000: 'Coal',93000: 'Basement'}
+)
+# print(f'shape of dataframe after label encoding columns {hidden2.shape}')
+hidden2=hidden2[
+    (hidden2['FORCE_2020_LITHOFACIES_LITHOLOGY']==65000) |
+    (hidden2['FORCE_2020_LITHOFACIES_LITHOLOGY']==30000) |
+    (hidden2['FORCE_2020_LITHOFACIES_LITHOLOGY']==70000) |
+    (hidden2['FORCE_2020_LITHOFACIES_LITHOLOGY']==65030) |
+    (hidden2['FORCE_2020_LITHOFACIES_LITHOLOGY']==80000)
+]
+
+hidden2.drop(['GROUP','FORMATION','WELL'], axis = 1, inplace=True)
+hidden2.fillna(-9999, inplace=True)
+X2_hidden = hidden2.drop(['FORCE_2020_LITHOFACIES_LITHOLOGY','WELL_encoded','FORCE_2020_LITHOFACIES_CONFIDENCE','Lithonames'], axis=1)
+Y2_hidden = hidden2['FORCE_2020_LITHOFACIES_LITHOLOGY']
+X2_hidden.shape, Y2_hidden.shape
+Y2_hidden_map = Y2_hidden.map(l_key)
+
+#Exploratory Data Analysis Plots
+import seaborn as sns
+corr_matrix = train_data.iloc[:,:-3].corr()
+fig, ax = plt.subplots(figsize=(18,9))
+sns.heatmap(corr_matrix, annot=True)
+import plotly.express as px
+px.scatter(train_data, x = train_data['NPHI'], y= train_data['RHOB'], color = train_data['Lithonames'])
+px.histogram(train_data, 'GR', color='Lithonames')
+
+#Spatial distribution of trainining and Hidden Wells
+fig, ax = plt.subplots(figsize=(15,8))
+ax.scatter(x=train_data['X_LOC'], y = train_data['Y_LOC'], color = 'salmon', s = 100, label='Training wells')
+plt.grid(color = 'black', linestyle = '--', linewidth = 0.7)
+plt.title('Spatial variation of wells')
+plt.xlabel('X_LOC(longitude)')
+plt.ylabel('Y_LOC(Latitude)')
+
+ax.scatter(x=hidden2['X_LOC'], y = hidden2['Y_LOC'], color = 'black', s = 100, label='Test wells')
+plt.xlim([420000,575000])
+plt.ylim([6400000,6900000])
+plt.legend()
+plt.savefig('Spatialdist.pdf', dpi=1200)
+plt.show()
+
+#Model Building
+#1.xgboost
+import xgboost as xgb
+xgb_new = xgb.XGBClassifier(max_depth=10, booster='gbtree',
+                          objective='softprob', learning_rate=0.1, random_state=0)
+xgb_new.fit(X3,Y3_mp)
+xgb_new.score(X2_hidden, Y2_hidden_map)
+
+#2.RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier
+clf = RandomForestClassifier()
+clf.fit(X3,Y3_mp)
+clf.score(X2_hidden, Y2_hidden_map)
+
+#3.KNeighborsClassifier
+from sklearn.neighbors import KNeighborsClassifier
+knn = KNeighborsClassifier(n_neighbors=3)
+knn.fit(X3, Y3_mp)
+knn.score(X2_hidden, Y2_hidden_map)
+
+#4.AdaBoostClassifier
+from sklearn.ensemble import AdaBoostClassifier
+adc = AdaBoostClassifier()
+adc.fit(X3, Y3_mp)
+adc.score(X2_hidden, Y2_hidden_map)
+
+#Accuracy Plot
+models = pd.DataFrame({'XGBoost': 0.777,
+             'RandomForestClassifier': 0.784,
+             'AdaBoostClassifier': 0.704,
+             'KNeighborsClassifier': 0.613}.items(), columns=['Model','Accuracy'])
+fig, ax = plt.subplots(figsize=(12,6))
+ax.scatter(models['Model'], models['Accuracy'], s=80, color='red');
+plt.plot(models['Model'], models['Accuracy'], color='black')
+plt.grid()
+plt.xticks()
+plt.xlabel('Models')
+plt.ylabel('Accuracy')
+plt.savefig('Model_acc.pdf', dpi=900)
+plt.show()
+
+#Classification Report for top  two models
+#Report for xgboost
+from sklearn.metrics import classification_report
+Y_pred = xgb_new.predict(X2_hidden)
+print(classification_report(Y2_hidden_map, Y_pred, target_names=['Sandstone','Sandstone/Shale','Shale','Marl','Limestone']))
+
+#Report for RF
+Y_pred2 = clf.predict(X2_hidden)
+print(classification_report(Y2_hidden_map, Y_pred2, target_names=['Sandstone','Sandstone/Shale','Shale','Marl','Limestone']))
+
+#Confusion matrix for top 2 models
+from sklearn.metrics import confusion_matrix
+conf_mat_xgb = confusion_matrix(Y2_hidden_map, Y_pred)
+import seaborn as sns
+#Confusion matrix of xgboost model
+fig, ax = plt.subplots(figsize=(16,8))
+sns.heatmap(conf_mat_xgb, annot=True, linewidths=1, linecolor= 'black', cmap='YlGnBu', 
+            xticklabels=['Sandstone','Sandstone/Shale','Shale','Marl','Limestone'],
+           yticklabels=['Sandstone','Sandstone/Shale','Shale','Marl','Limestone'], fmt='g')
+plt.savefig('Corrxbg.pdf', dpi=900)
+
+conf_mat_rf = confusion_matrix(Y2_hidden_map, Y_pred2)
+#Confusion matrix of Random Forest model
+fig, ax = plt.subplots(figsize=(16,8))
+sns.heatmap(conf_mat_rf, annot=True, linewidths=1, linecolor= 'black', cmap='YlGnBu', 
+            xticklabels=['Sandstone','Sandstone/Shale','Shale','Marl','Limestone'],
+           yticklabels=['Sandstone','Sandstone/Shale','Shale','Marl','Limestone'], fmt='g')
+plt.savefig('Corrrf.pdf', dpi=900)
+
+#Feature Importance
+#Xgboost
+xgb_new.feature_importances_
+feat_keys = {'DEPTH_MD': 0.02548063, 'X_LOC': 0.04422522, 'Y_LOC': 0.07283204, 'Z_LOC': 0.06780989, 
+ 'CALI': 0.04060762, 'RMED': 0.03188797, 'RDEP': 0.02110162, 'RHOB':  0.03390931, 'GR': 0.10847723, 'NPHI': 0.04205422,
+       'PEF': 0.01913691, 'DTC': 0.05084408, 'SP': 0.02449108, 'BS': 0.10814827, 'ROP': 0.02281645,
+       'DTS': 0.02529897,'DRHO':0.01397949, 'ROPA': 0.01831111, 'GROUP_encoded': 0.17659862, 
+              'FORMATION_encoded': 0.05198921 }
+feat_sorted = dict(sorted(feat_keys.items(), key=lambda item: item[1]))
+fig, ax = plt.subplots(figsize = (14,7))
+plt.barh(list(feat_sorted.keys()), list(feat_sorted.values()), color = 'darkblue');
+plt.grid()
+plt.xlabel('Importance metric')
+plt.savefig('FI_xgb.pdf')
+plt.show()
+
+#RandomForest
+clf.feature_importances_
+feat_keys = {'DEPTH_MD': 0.06763437, 'X_LOC': 0.06689502, 'Y_LOC': 0.07922236, 'Z_LOC': 0.06788841, 
+ 'CALI': 0.05521296, 'RMED': 0.05223883, 'RDEP': 0.04905907, 'RHOB':  0.04944205, 'GR': 0.17116268, 'NPHI': 0.05722557,
+       'PEF': 0.02407114, 'DTC': 0.06798876, 'SP': 0.04056605, 'BS': 0.01591146, 'ROP': 0.01862477,
+       'DTS': 0.01016801,'DRHO':0.0267568, 'ROPA': 0.00858712, 'GROUP_encoded': 0.03956071, 
+              'FORMATION_encoded': 0.03178384  }
+feat_sorted = dict(sorted(feat_keys.items(), key=lambda item: item[1]))
+fig, ax = plt.subplots(figsize = (14,7))
+plt.barh(list(feat_sorted.keys()), list(feat_sorted.values()), color = 'cyan');
+plt.grid()
+plt.xlabel('Importance metric')
+plt.savefig('FI_rf.pdf')
+plt.show()
+
+#SHAP(SHapley Additive exPlanations)
+import shap
+explainer = shap.TreeExplainer(xgb_new)
+shap_values = explainer.shap_values(X2_hidden)
+shap.summary_plot(shap_values, features=X2_hidden, feature_names=X2_hidden.columns, plot_size=(14,10))
